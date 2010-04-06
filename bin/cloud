@@ -43,7 +43,7 @@ EOS
 
     @loaded_pool = pool
     @loaded_clouds = pool.loaded_clouds(command[:name])
-    if @loaded_clouds.count == 0
+    if @loaded_clouds.empty?
       puts "No clouds loaded. Check your clouds.rb or -n option"
       exit
     end
