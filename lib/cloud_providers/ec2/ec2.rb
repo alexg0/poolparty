@@ -177,8 +177,8 @@ module CloudProviders
       end
 
       assign_elastic_ips
-      assign_hostnames
       cleanup_ssh_known_hosts!
+      assign_hostnames
       puts "Attaching EBS volumes"
       assign_ebs_volumes # Assign EBS volumes
     end
@@ -302,8 +302,7 @@ module CloudProviders
         break if available_names.empty?
         next if available_names.include? hostname
 
-        hostname = available_names.shift
-        node.change_hostname hostname
+        node.change_hostname available_names.shift
       end
     end
 
@@ -382,7 +381,8 @@ module CloudProviders
     end
 
     def hostname(*names)
-      names.each {|n| hostnames << n}
+      raise "hostname: at least one name needed" if names.empty?
+      names.flatten.each {|n| hostnames << n}
     end
 
     def rds(given_name=cloud.proper_name, o={}, &block)

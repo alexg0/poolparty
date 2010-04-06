@@ -18,7 +18,7 @@ module CloudProviders
         ['echo "%s" > /etc/hostname' % name,
          '[ -f %s.orig ] || cp %s %s.org' % ([etc_hosts]*3),
          'perl -i.bak -ne "print unless /^%s/" %s' % [ip, etc_hosts],
-         'echo "%s %s %s" >> /etc/hosts' % [ip, name, fqdn],
+         'echo "%s %s %s" >> /etc/hosts' % [ip, fqdn, name],
          'hostname %s' % name
         ]
 
