@@ -1,8 +1,6 @@
 module PoolParty  
   class Cloud < Base
 
-    BOOTSTRAP_PHASES = [:compile, :bootstrap] unless defined? BOOTSTRAP_PHASES
-
     default_options(
       :description            => "PoolParty cloud",
       :minimum_instances      => 1,

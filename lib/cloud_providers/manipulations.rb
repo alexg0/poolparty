@@ -4,7 +4,7 @@ module CloudProviders
   # Destructive manipulations, like changing the machine hostname.
   #
   module Manipulations
-        
+
     def hostname
       @hostname ||= ssh("hostname -f").chomp
     end
