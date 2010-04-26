@@ -94,3 +94,33 @@ Rake::RDocTask.new do |rd|
   rd.rdoc_dir = "rdoc"
   # rd.template = "hanaa"
 end
+
+# Generate tags
+module Tags
+  # TODO: add gem dirs
+  RUBY_DIRS = 'lib' 
+
+  # exuberant-ctags package is required to use -R switch.  On
+  # ubuntu, if emacs is installed, it's provided etags is higher
+  # priority then exuberant etags, so may want to run galternatives to
+  # fix it.
+  CTAGS_CMD = 'ctags'
+  ETAGS_CMD = 'etags'
+end
+
+namespace 'tags' do
+  task :emacs do
+    puts "Making Emacs TAGS file"
+    sh "#{Tags::ETAGS_CMD} -R #{Tags::RUBY_DIRS}", :verbose => false
+  end
+
+  task :vi do
+    puts "Making vi TAGS file"
+    sh "#{Tags::CTAGS_CMD} -R #{Tags::RUBY_DIRS}", :verbose => false
+  end
+end
+
+task :tags => ["tags:emacs", "tags:vi"]
+task :etags => ["tags:emacs"]
+task :ctags => ["tags:vi"]
+

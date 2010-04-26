@@ -16,6 +16,7 @@ log
 ri/
 .autosession.vim
 tags
+TAGS
 .session
 clouds.rb
 test/test_dir/
