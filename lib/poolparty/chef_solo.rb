@@ -25,12 +25,9 @@ module PoolParty
 
     # The NEW actual chef resolver.
     def build_tmp_dir
-      base_directory = tmp_path/"etc"/"chef"
+      super
+
       roles_dir = "#{base_directory}/roles"
-      FileUtils.rm_rf base_directory # cleanup old chef temp directory
-      puts "Copying the chef-repo into the base directory from #{repo}"
-      
-      FileUtils.mkdir_p base_directory
       FileUtils.mkdir_p roles_dir # Why do we need this??!?
       if File.directory?(repo)
         if File.exist?(base_directory)
@@ -39,6 +36,7 @@ module PoolParty
         end
         cookbook_path = "#{base_directory}/cookbooks"
         FileUtils.mkdir_p cookbook_path
+        puts "Copying the chef-repo into the base directory from #{repo}"
         FileUtils.cp_r "#{repo}/.", cookbook_path
       else
         raise "#{repo} chef repo directory does not exist"

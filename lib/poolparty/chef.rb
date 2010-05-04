@@ -2,8 +2,8 @@ module PoolParty
   class Chef < Base
 
     BOOTSTRAP_PACKAGES = %w( ruby ruby1.8-dev libopenssl-ruby1.8 rdoc
-      ri irb build-essential wget ssl-cert rubygems git-core rake
-      librspec-ruby libxml-ruby zlib1g-dev libxml2-dev )
+      ri irb build-essential wget ssl-cert rubygems
+      libxml-ruby zlib1g-dev libxml2-dev )
     # thin couchdb 
     BOOTSTRAP_GEMS = %w( chef )
 
@@ -12,8 +12,17 @@ module PoolParty
     BOOTSTRAP_BINS = %w( gem chef-solo chef-client )
     BOOTSTRAP_DIRS = %w( /var/log/chef /var/cache/chef /var/run/chef )
 
+    def base_directory
+      tmp_path/"etc"/"chef"
+    end
+
     def compile!
       build_tmp_dir
+    end
+
+    def build_tmp_dir
+      FileUtils.rm_rf base_directory
+      FileUtils.mkdir_p base_directory   
     end
 
     def self.types

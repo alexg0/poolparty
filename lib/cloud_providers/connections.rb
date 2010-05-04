@@ -104,12 +104,17 @@ module CloudProviders
       ssh_error_msg="SSH is not available for this node. perhaps you need to authorize it?"
       raise PoolParty::PoolPartyError.create("SSHError", ssh_error_msg) unless ssh_available?
       destination_path = opts[:destination] || opts[:source]
+
+      excludes = opts[:exclude] || []
+      excludes = [excludes] unless excludes.respond_to? :each
+      
       # alexg: local rsync runs as plain user, and -a without --no-o --no-g
       # would chown /etc, /tmp  and other included directories away from root.
       # makes for 'strange' behavior, to say the least
       rsync_opts = opts[:rsync_opts] || '-va --no-o --no-g'
       rsync_opts += %q% --rsync-path="sudo rsync"% unless user=="root"
       rsync_opts += %q% --exclude=.svn --exclude=.git --exclude=.cvs %
+      rsync_opts += excludes.map {|path| '--exclude="%s"' % path }.join ' '
       cmd_string =  "rsync -L  -e 'ssh #{ssh_options}' #{rsync_opts} #{opts[:source]}  #{user}@#{host}:#{destination_path}"
       out = system_run(cmd_string, :quiet => true)
       out

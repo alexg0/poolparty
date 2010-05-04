@@ -249,7 +249,14 @@ module CloudProviders
       nodes.each do |node|
         next unless node.in_service?
         node.cloud_provider = self
-        node.rsync_dir(tmp_path)
+
+        # rsync /etc and /tmp separately to avoid pitfalls with
+        # changing existing directory permissions.  Directories below
+        # should end in /.
+        known_dirs = %w[ /tmp /etc ]
+        known_dirs.each { |d| node.rsync_dir(tmp_path/d, d) }
+        node.rsync_dir(tmp_path, '/', known_dirs)
+
         node.bootstrap_chef!
         node.run_chef!
       end

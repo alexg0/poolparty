@@ -32,8 +32,8 @@ module CloudProviders
       ping_port(public_ip, 22, 40)
     end
     
-    def rsync_dir(dir)
-      rsync :source => dir/"*", :destination => "/"
+    def rsync_dir(dir, dest=nil, exclude=nil)
+      rsync :source => dir/"*", :destination => dest || "/", :exclude => exclude
     end
     
     def chef_bootstrapped?

@@ -53,9 +53,8 @@ module PoolParty
 
     # The NEW actual chef resolver.
     def build_tmp_dir
-      base_directory = tmp_path/"etc"/"chef"
-      FileUtils.rm_rf base_directory
-      FileUtils.mkdir_p base_directory   
+      super
+
       FileUtils.cp validation_key, base_directory if validation_key
       puts "Creating the dna.json"
       attributes.to_dna [], base_directory/"dna.json", {:run_list => roles.map{|r| "role[#{r}]"} + _recipes.map{|r| "recipe[#{r}]"}}.merge(attributes.init_opts)
@@ -92,8 +91,13 @@ openid_url         "#{openid_url}"
 
     def write_bootstrap_files(solo_rb, chef_json)
       uri=URI.parse(server_url)
-      # this maybe reduntant, URL should have a port in there
-      uri.port=4000 if uri.port == 80 # default port for chef
+      # default port for chef
+      uri.port=4000 if uri.scheme == 'https' && uri.port == 80
+
+      unless uri.path = '/' then
+        raise PoolPartyError.create("ChefArgumentMissing",
+                                    "Chef server URL cant have path in it")
+      end
 
       contents_solo_rb = <<-EOE
 file_cache_path "/tmp/chef-solo"
@@ -110,7 +114,7 @@ recipe_url "http://s3.amazonaws.com/chef-solo/bootstrap-latest.tar.gz"
             :init_style => init_style,
             :path => "/srv/chef",
             :serve_path => "/srv/chef",
-            :server_fqdn => uri.host + uri.path,
+            :server_fqdn => uri.host,
             :server_port => uri.port,
           },
         },
