@@ -98,7 +98,7 @@ end
 # Generate tags
 module Tags
   # TODO: add gem dirs
-  RUBY_DIRS = 'lib' 
+  RUBY_DIRS = %w( lib vendor/gems )
 
   # exuberant-ctags package is required to use -R switch.  On
   # ubuntu, if emacs is installed, it's provided etags is higher
@@ -111,12 +111,12 @@ end
 namespace 'tags' do
   task :emacs do
     puts "Making Emacs TAGS file"
-    sh "#{Tags::ETAGS_CMD} -R #{Tags::RUBY_DIRS}", :verbose => false
+    sh "#{Tags::ETAGS_CMD} -R #{Tags::RUBY_DIRS.join(' ')}", :verbose => false
   end
 
   task :vi do
     puts "Making vi TAGS file"
-    sh "#{Tags::CTAGS_CMD} -R #{Tags::RUBY_DIRS}", :verbose => false
+    sh "#{Tags::CTAGS_CMD} -R #{Tags::RUBY_DIRS.join(' ')}", :verbose => false
   end
 end
 
