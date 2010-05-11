@@ -14,6 +14,10 @@ module PoolParty
     def clouds
       @clouds ||= {}
     end
+
+    def loaded_clouds(name=nil)
+      name ? pool.clouds[name] : pool.clouds.values
+    end
     
     # Run command/s on all nodes in the pool.
     # Returns a hash in the form of {cloud => [{instance_id=>result}]}

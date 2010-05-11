@@ -8,10 +8,10 @@ GitStyleBinary.command do
   banner <<-EOS
 Usage: #{$0} #{all_options_string}
 
-  ssh into an instance of the cloud
+  rsync to an instance of the cloud
 EOS
 
-  short_desc "ssh into an instance of the cloud"
+  short_desc "rsync into an instance of the cloud"
   opt :to, "To this directory", :default => "~"
     
   run do |command|

@@ -23,7 +23,7 @@ module CloudProviders
       end
     end
     def volumes(*volume_ids)
-      return @volumes if volume_ids.size==0
+      return @volumes if volume_ids.empty?
       volume_ids.each{|volume_id| @volumes << cloud.list_ec2_volumes(:volumeId => volume_id)}
     end
     def volumes_attached_to(instanceId)

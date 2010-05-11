@@ -43,11 +43,11 @@ module CloudProviders
     # TODO: chef_bootstrapped? should go away, since Chef#node_bootstrap!
     # already checks node_bootstrap!.  There is a force flag as well.
     def bootstrap_chef!
-      cloud.chef.node_bootstrap!(self)
+      cloud.chef.node_bootstrap!(self) if cloud.chef
     end
     
     def run_chef!
-      cloud.chef.node_run!(self)
+      cloud.chef.node_run!(self) if cloud.chef
     end
         
     def run
