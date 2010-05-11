@@ -1,11 +1,20 @@
 module PoolParty  
   class Cloud < Base
+
+    BOOTSTRAP_PHASES = [:compile, :bootstrap] unless defined? BOOTSTRAP_PHASES
+
     default_options(
       :description            => "PoolParty cloud",
       :minimum_instances      => 1,
       :maximum_instances      => 3
     )
     
+    # User provided bootstraps, run in the order the user specifies
+    # them.  User bootstrap rules are should be idempotent, and
+    # preferrably cheap in the 2nd run case
+    # format: assoc (array of arrays)
+    attr_accessor :user_bootstraps
+
     # returns an instance of Keypair
     # You can pass either a filename which will be searched for in ~/.ec2/ and ~/.ssh/
     # Or you can pass a full filepath
@@ -21,6 +30,17 @@ module PoolParty
         raise ArgumentError, "There was an error when defining the keypair"
       end
     end
+
+    # phase is one of [:compile, :bootstrap]
+    def bootstrap(phase=:bootstrap, name=:unnamed, &block)
+      raise PoolParty::PoolPartyError.
+        create("BadBootstrapPhsse",
+               "phase must be one of :#{BOOTSTRAP_PHASES.join(',:')}") unless 
+        BOOTSTRAP_PHASES.include?(phase)
+      @user_bootstraps ||= []
+      @user_bootstraps << [ phase, name, block ]
+    end
+
     
     private
     def generate_keypair(extra_paths=[])
@@ -93,18 +113,23 @@ You did not specify a cloud provider in your clouds.rb. Make sure you have a blo
       end
     end
 
+    # Declare chef instance if a block is passed in..  If called
+    # without a block, return Chef instance.
     def chef(chef_type=:solo, &block)
+      return @chef unless block_given?
       raise ArgumentError, "Chef type must be one of #{Chef.types.map{|v| ":" + v.to_s}.join(",")}." unless Chef.types.include?(chef_type)
-      @chef||=Chef.get_chef(chef_type,self,&block)
+
+      raise PoolParty::PoolPartyError.create("DslMethodCall", "You may only have one chef declaration per cloud") if @chef
+
+      @chef=Chef.get_chef(chef_type,self,&block)
     end
     # compile the cloud spec and execute the compiled system and remote calls
     def run
       puts "  running on #{cloud_provider.class}"
       cloud_provider.run
-      unless @chef.nil?
-        compile!
-        bootstrap!
-      end
+
+      compile!
+      bootstrap!
     end
         
     
@@ -191,18 +216,39 @@ No autoscalers defined
           rsync upload[:source], upload[:dest]
         end
       end
-      @chef.compile! unless @chef.nil?
+      @chef.compile! if @chef
+      run_user_bootstrap! :compile
     end
     
     def bootstrap!
       cloud_provider.bootstrap_nodes!(tmp_path)
+      run_user_bootstrap! :bootstrap
     end
     
     def configure!
       compile!
       cloud_provider.configure_nodes!(tmp_path)
+      run_user_bootstrap! :bootstrap
     end
     
+    def run_user_bootstrap!(phase,on_node=nodes)
+      raise PoolParty::PoolPartyError.create(
+        "BadBootstrapPhsse",
+        "phase must be one of :#{BOOTSTRAP_PHASES.join(',:')}") unless 
+        BOOTSTRAP_PHASES.include?(phase)
+      return unless @user_bootstraps
+
+      bootstraps_to_run = user_bootstraps.find_all {|bs| bs.first == phase }
+      nodes.each do |node|
+        puts "----> User bootstraps (:#{phase}) for node: #{node.instance_id}"
+        bootstraps_to_run.each do |bs|
+          block = bs.last
+          block.call(node, cloud_provider,
+                     phase == :compile ? tmp_path : nil)
+        end
+      end
+    end
+
     def reset!
       cloud_provider.reset!
     end
