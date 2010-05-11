@@ -9,11 +9,10 @@ module PoolParty
       :maximum_instances      => 3
     )
     
-    # User provided bootstraps, run in the order the user specifies
-    # them.  User bootstrap rules are should be idempotent, and
+    # User and system provided bootstraps, run in priority and then name order.
+    # User bootstrap rules are should be idempotent, and
     # preferrably cheap in the 2nd run case
-    # format: assoc (array of arrays)
-    attr_accessor :user_bootstraps
+    attr :bootstrap_set
 
     # returns an instance of Keypair
     # You can pass either a filename which will be searched for in ~/.ec2/ and ~/.ssh/
@@ -32,13 +31,9 @@ module PoolParty
     end
 
     # phase is one of [:compile, :bootstrap]
-    def bootstrap(phase=:bootstrap, name=:unnamed, &block)
-      raise PoolParty::PoolPartyError.
-        create("BadBootstrapPhsse",
-               "phase must be one of :#{BOOTSTRAP_PHASES.join(',:')}") unless 
-        BOOTSTRAP_PHASES.include?(phase)
-      @user_bootstraps ||= []
-      @user_bootstraps << [ phase, name, block ]
+    def bootstrap(phase=:bootstrap,priority=nil,name=:unnamed,owner_obj=nil,&block)
+      @bootstrap_set ||= BootstrapSet.new(self)
+      @bootstrap_set.register_bootstrap(phase, priority, name, owner_obj, &block)
     end
 
     
@@ -217,35 +212,25 @@ No autoscalers defined
         end
       end
       @chef.compile! if @chef
-      run_user_bootstrap! :compile
+      run_bootstrap! :compile
     end
     
     def bootstrap!
       cloud_provider.bootstrap_nodes!(tmp_path)
-      run_user_bootstrap! :bootstrap
+      run_bootstrap! :bootstrap
     end
     
     def configure!
       compile!
-      cloud_provider.configure_nodes!(tmp_path)
-      run_user_bootstrap! :bootstrap
+      bootstrap!
+      run_bootstrap! :configure
     end
     
-    def run_user_bootstrap!(phase,on_node=nodes)
-      raise PoolParty::PoolPartyError.create(
-        "BadBootstrapPhsse",
-        "phase must be one of :#{BOOTSTRAP_PHASES.join(',:')}") unless 
-        BOOTSTRAP_PHASES.include?(phase)
-      return unless @user_bootstraps
+    def run_bootstrap!(phase,on_nodes=nodes)
+      return unless @bootstrap_set
 
-      bootstraps_to_run = user_bootstraps.find_all {|bs| bs.first == phase }
-      nodes.each do |node|
-        puts "----> User bootstraps (:#{phase}) for node: #{node.instance_id}"
-        bootstraps_to_run.each do |bs|
-          block = bs.last
-          block.call(node, cloud_provider,
-                     phase == :compile ? tmp_path : nil)
-        end
+      on_nodes.each do |node|
+        @bootstrap_set.run(phase,node)
       end
     end
 

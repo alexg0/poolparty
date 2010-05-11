@@ -50,6 +50,7 @@ $LOAD_PATH.unshift(File.dirname(__FILE__)/"poolparty")
     chef_solo
     chef_client
     cloud pool
+    bootstrap_set
   ).each do |lib|
   require "poolparty/#{lib}"
 end
