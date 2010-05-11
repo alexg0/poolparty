@@ -11,6 +11,10 @@ module CloudProviders
         @host = n
       end
     end
+
+    def short_hostname
+      dns_name.sub(/\..+$/, '')
+    end
     
     def ping_port(host, port=22, retry_times=400)
       connected = false
@@ -46,12 +50,18 @@ module CloudProviders
       env = extra_ssh_ops[:env] || {}
       extra_ssh_ops.delete :env
 
-      # Decide to use sudo or not
-      do_sudo = user!="root"
-
+      # default to do_sudo=true if non-root user
+      # never sudo if already root
+      do_sudo = true
       if extra_ssh_ops.has_key? :do_sudo
         do_sudo = extra_ssh_ops[:do_sudo] 
         extra_ssh_ops.delete :do_sudo
+      end
+      do_sudo = false if user == 'root'
+
+      if extra_ssh_ops.has_key? :echo_command
+        echo_command = extra_ssh_ops[:echo_command] 
+        extra_ssh_ops.delete :echo_command
       end
 
       envstring = env.collect {|k,v| "#{k}=#{v}"}.join ' && '
@@ -72,18 +82,20 @@ module CloudProviders
             sudocmd = cmd
           end
 
+          puts "ssh command: %s" % shell_escape(sudocmd) if echo_command
           r = system_run ssh_string + %Q% "#{shell_escape sudocmd}"% 
         end
         r
       end
     end
 
-    # remove hostname and corresponding from known_hosts file.  Avoids warning when reusing elastic_ip, and 
-    # less likely, if amazone reassigns ip.  By default removes both dns_name and ip
-    def ssh_cleanup_known_hosts!(hosts=[host, public_ip])
-      hosts = [hosts] unless hosts.respond_to? :each
-      hosts.compact.each do |name|
-        system_run "ssh-keygen -R %s" % name
+    # remove hostname and corresponding from known_hosts file.  Avoids
+    # warning when reusing hostnames, elastic_ip, and (in less likely
+    # case) if amazon reassigns ips.  By default removes both
+    # dns_name, first part of the hostname, and ip
+    def ssh_cleanup_known_hosts!(hosts=[host, short_hostname, public_ip])
+      hosts.flatten.compact.each do |name|
+        system_run "ssh-keygen -R %s 2>/dev/null" % name
       end
     end
     

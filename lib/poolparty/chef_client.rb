@@ -40,15 +40,13 @@ module PoolParty
       'invoke-rc.d chef-client start'
     end
 
-    def node_configure!(remote_instance)
-      super
+    def node_configure_cmds
       cmds = 
-        [ 'PATH="$PATH:$GEM_BIN" chef-solo -j /tmp/chef/chef.json -c /tmp/chef/solo.rb',
+        [ 'PATH="$PATH:$GEM_BIN" && chef-solo -j /tmp/chef/chef.json -c /tmp/chef/solo.rb',
           'invoke-rc.d chef-client stop',
-          'PATH="$PATH:$GEM_BIN" chef-client -j /etc/chef/dna.json -c /etc/chef/client.rb',
+          'PATH="$PATH:$GEM_BIN" && chef-client -j /etc/chef/dna.json -c /etc/chef/client.rb'
         ]
-
-      remote_instance.ssh cmds
+      (super || []) + cmds
     end
 
     # The NEW actual chef resolver.

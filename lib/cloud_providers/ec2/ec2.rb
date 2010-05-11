@@ -178,7 +178,10 @@ module CloudProviders
 
       assign_elastic_ips
       cleanup_ssh_known_hosts!
-      assign_hostnames
+      # cleanup ssh_known_hosts again, if assigned hostnames.  The
+      # newly assigned hostname may be in know_hosts file
+      assign_hostnames &&
+        cleanup_ssh_known_hosts!
       puts "Attaching EBS volumes"
       assign_ebs_volumes # Assign EBS volumes
     end
@@ -311,6 +314,7 @@ module CloudProviders
 
         node.change_hostname available_names.shift
       end
+      true
     end
 
     def cleanup_ssh_known_hosts!(nodes_to_cleanup=nodes,
@@ -342,9 +346,7 @@ module CloudProviders
     def all_nodes
       @nodes ||= describe_instances.select { |i| 
         !(security_group_names & tags(i)).empty? 
-      }.sort {|a,b| 
-        DateTime.parse(a.launchTime) <=> DateTime.parse(b.launchTime)
-      }
+      }.sort_by {|i| i.launchTime }
     end
 
     # Describe instances

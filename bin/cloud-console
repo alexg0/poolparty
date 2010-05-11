@@ -7,7 +7,14 @@ GitStyleBinary.command do
   banner <<-EOS
 Usage: #{$0} #{all_options_string}
 
-  Open an irb session with the clouds.rb loaded
+  Open an irb session with the clouds.rb loaded.  
+  Some hints to get started.
+
+  pool                         => PoolParty::Pool instance
+  pool.loaded_clouds           => array of defined Poolparty::Cloud objects
+  pool.loaded_clouds.first     => first cloud
+  pool.loaded_clouds.first.node.first  => first node on first cloud
+
 EOS
 
   short_desc "Open an irb session with clouds.rb loaded"
