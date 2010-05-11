@@ -177,6 +177,7 @@ module CloudProviders
       end
 
       assign_elastic_ips
+      assign_hostnames
       cleanup_ssh_known_hosts!
       puts "Attaching EBS volumes"
       assign_ebs_volumes # Assign EBS volumes
@@ -289,6 +290,23 @@ module CloudProviders
       end
     end
 
+    def assign_hostnames
+      return if hostnames.empty?
+
+      available_names = hostnames
+      existing_names = nodes.inject({}) do |s,node| 
+        s[node.hostname] = node
+        s
+      end
+      existing_names.each_pair do |hostname, node|
+        break if available_names.empty?
+        next if available_names.include? hostname
+
+        hostname = available_names.shift
+        node.change_hostname hostname
+      end
+    end
+
     def cleanup_ssh_known_hosts!(nodes_to_cleanup=nodes,
                                  even_unavailable=false)
       puts "cleaning up .ssh/known_hosts"
@@ -363,6 +381,10 @@ module CloudProviders
       ips.each {|ip| elastic_ips << ip}
     end
 
+    def hostname(*names)
+      names.each {|n| hostnames << n}
+    end
+
     def rds(given_name=cloud.proper_name, o={}, &block)
       rds_instances << RdsInstance.new(given_name, sub_opts.merge(o || {}), &block)
     end
@@ -412,7 +434,9 @@ module CloudProviders
     def elastic_ips
       @elastic_ips ||= []
     end
-
+    def hostnames
+      @hostnames ||= []
+    end
     def ebs_volume_groups
       @ebs_volume_groups ||= []
     end

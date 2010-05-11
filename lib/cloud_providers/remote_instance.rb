@@ -3,7 +3,7 @@
 =end
 module CloudProviders
   class RemoteInstance
-    include Dslify, Connections
+    include Dslify, Connections, Manipulations
     
     attr_reader :name, :init_opts, :raw_response
     attr_accessor :cloud_provider
