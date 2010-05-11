@@ -16,13 +16,20 @@ module CloudProviders
       dns_name.sub(/\..+$/, '')
     end
     
+    # sockets need to be closed, or sshd runs out of available
+    # concurrent sessions.  See sshd_config(5) under MaxStartups.
+    # Closing socket to avoid holding ssh connection open.
     def ping_port(host, port=22, retry_times=400)
       connected = false
       retry_times.times do |i|
         begin
-          break if connected = TCPSocket.new(host, port).is_a?(TCPSocket)
+          socket = TCPSocket.new(host, port)
+          connected = true
+          break
         rescue Exception => e
           sleep(2)
+        ensure
+          socket.close if socket
         end
       end
       connected
@@ -40,7 +47,7 @@ module CloudProviders
 
     def ssh( commands=[], extra_ssh_ops={})
       # commands can be single commands, as well as array
-      commands = [commands] unless commands.respond_to? :each
+      commands = [commands].flatten
 
       # Get the environment hash out of
       # the extra_ssh_ops and then delete
@@ -82,8 +89,12 @@ module CloudProviders
             sudocmd = cmd
           end
 
-          puts "ssh command: %s" % shell_escape(sudocmd) if echo_command
-          r = system_run ssh_string + %Q% "#{shell_escape sudocmd}"% 
+          escaped_cmd = shell_escape(sudocmd)
+          ssh_cmd = ssh_string + %Q% "#{escaped_cmd}"% 
+
+          puts "ssh command: %s" % escaped_cmd if echo_command
+          puts "ssh_full: %s" % ssh_cmd if echo_command == :debug
+          r = system_run ssh_cmd
         end
         r
       end
@@ -148,13 +159,18 @@ module CloudProviders
     # This method is mainly broken out to ease testing in the other methods
     # It opens the 3 IO outputs (stdin, stdout, stderr) and print the output out
     # as the command runs, unless the quiet option is passed in
+    #
+    # TODO: this should to be replaced by systemu gem, since systemu
+    # handles reading stderr cleaner.  Most likely below implementation will
+    # hang when stderr buffer fills up.
     def system_run(cmd, o={})
       opts = {:quiet => false, :sysread => 1024}.merge(o)
       buf = ""
       # puts("Running command: #{cmd}")
-      Open3.popen3(cmd) do |stdout, stdin, stderr|
+      Open3.popen3(cmd) do |stdin, stdout, stderr|
         begin
-          while (chunk = stdin.readpartial(opts[:sysread]))
+          stdin.close
+          while (chunk = stdout.readpartial(opts[:sysread]))
             buf << chunk
             unless chunk.nil? || chunk.empty?
               if not opts[:quiet]
